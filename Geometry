@@ -1,5 +1,5 @@
 # define PI           3.14159265358979323846
-# define EPI          0.000000001
+# define EPI          0.0000001
 template <class F>
 struct Point {
     F x, y;
@@ -136,6 +136,33 @@ template <class F1, class F2>
 distF<F1, F2> distLine(const Point<F1>& point, const Line<F2>& line) {
     if (!line) return dist(point, line.a);
     return abs((point - line.a) ^ line.ab) / norm(line.ab);
+}
+
+template <class F>
+pair<bool, Point<F>> intersect(const Line<F>& l1, const Line<F>& l2) {
+    if (l1.ab == l2.ab || l1.ab == -l2.ab) {
+        Point<F> p = l1.a - l2.a;
+        p = p / norm(p);
+        Point<F> tmp = l1.ab / norm(l1.ab);
+        if (p == tmp || p == -tmp) return {true, l1.a};
+        return {false, l1.a};
+    }
+    F dis[2];
+    dis[0] = distLine(l2.a + 100.0 * l2.ab, l1);
+    dis[1] = distLine(l2.a - 100.0 * l2.ab, l1);
+    if (dis[0] == dis[1]) return {true, l2.a};
+    F sign = (dis[0] < dis[1]?1:-1);
+    F l = 0, r = 1;
+    function<bool(F)> f = [&](F r) {
+      return distLine(l2.a + r * l2.ab, l1) > distLine(l2.a + (r + EPI) * l2.ab, l1);
+    };
+    while (f(r)) r *= 2;
+    for (int i = 0; i < 50; i++) {
+        F mid = l + (r - l) / 2;
+        if (f(mid)) l = mid;
+        else r = mid;
+    }
+    return {true, l2.a + l2.ab * r};
 }
 
 template <class F>
