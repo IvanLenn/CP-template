@@ -139,30 +139,31 @@ distF<F1, F2> distLine(const Point<F1>& point, const Line<F2>& line) {
 }
 
 template <class F>
-pair<bool, Point<F>> intersect(const Line<F>& l1, const Line<F>& l2) {
-    if (l1.ab == l2.ab || l1.ab == -l2.ab) {
-        Point<F> p = l1.a - l2.a;
-        p = p / norm(p);
-        Point<F> tmp = l1.ab / norm(l1.ab);
-        if (p == tmp || p == -tmp) return {true, l1.a};
-        return {false, l1.a};
+Point<F> intersect(const Line<F>& l1, const Line<F>& l2) {
+    F len1 = norm(l1.ab), len2 = norm(l2.ab);
+    if (l1.ab * len2 == l2.ab * len1 || l1.ab * len2 == l2.ab * -len1) return l1.a;
+    if (l1.ab.x == 0) {
+        F t = (l1.a.x - l2.a.x) / l2.ab.x;
+        return makePoint(l1.a.x, l2.a.y + l2.ab.y * t);
     }
-    F dis[2];
-    dis[0] = distLine(l2.a + 100.0 * l2.ab, l1);
-    dis[1] = distLine(l2.a - 100.0 * l2.ab, l1);
-    if (dis[0] == dis[1]) return {true, l2.a};
-    F sign = (dis[0] < dis[1]?1:-1);
-    F l = 0, r = 1;
-    function<bool(F)> f = [&](F r) {
-      return distLine(l2.a + r * sign * l2.ab, l1) > distLine(l2.a + (r + EPI) * sign * l2.ab, l1);
-    };
-    while (f(r)) r *= 2;
-    for (int i = 0; i < 50; i++) {
-        F mid = l + (r - l) / 2;
-        if (f(mid)) l = mid;
-        else r = mid;
+    if (l1.ab.y == 0) {
+        F t = (l1.a.y - l2.a.y) / l2.ab.y;
+        return makePoint(l2.a.x + l2.ab.x * t, l1.a.y);
     }
-    return {true, l2.a + l2.ab * r * sign};
+    if (l2.ab.x == 0) {
+        F t = (l2.a.x - l1.a.x) / l1.ab.x;
+        return makePoint(l2.a.x, l1.a.y + l1.ab.y * t);
+    }
+    if (l2.ab.y == 0) {
+        F t = (l2.a.y - l1.a.y) / l1.ab.y;
+        return makePoint(l1.a.x + l1.ab.x * t, l2.a.y);
+    }
+    F c, d, p, q, m, n, a, b;
+    c = l1.a.x, d = l1.a.y, p = l1.ab.x, q = l1.ab.y;
+    a = l2.a.x, b = l2.a.y, m = l2.ab.x, n = l2.ab.y;
+    F y = (-q * m * b + q * n * a - c * n * q + d * p * n) / (-q * m + p * n);
+    F x = (d - y) * p / (-q) + c;
+    return makePoint(x, y);
 }
 
 template <class F>
