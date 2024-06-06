@@ -1,3 +1,4 @@
+// modify: merge, modify, base case
 const int N = 4e5;  // limit for array size
 int cnt;  // array size
 int t[2 * N];
