@@ -74,6 +74,6 @@ public:
     }
 
     int find_geq(int r) {
-        return find(r, 0, 0, size);
+        return find_geq(r, 0, 0, size);
     }
 };

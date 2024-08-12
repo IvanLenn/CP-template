@@ -1,95 +1,64 @@
 #include <bits/stdc++.h>
 using namespace std;
-typedef long long ll;
-const int INF = 1e9;
-const ll LNF = 1e18;
-#define F first
-#define S second
-#define eb emplace_back
-typedef vector<int> vi;
-typedef vector<ll> vl;
-typedef vector<vector<ll>> vll;
-typedef vector<vector<int>> vii;
-typedef pair<int, int> pi;
-typedef pair<ll, ll> pl;
-const int M = (1e9) + 7;
 
-int sum() { return 0; }
-
-template<typename T, typename... Args>
-T sum(T a, Args... args) { return a + sum(args...); }
-
-template<typename... T>
-void read(T &...args) { ((cin >> args), ...); }
-
-template<typename... T>
-void write(string delimiter, T &&...args) { ((cout << args << delimiter), ...); }
-
-template<typename T>
-void readc(T &t) { for (auto &e: t) { read(e); }}
-
-template<typename T>
-void writec(string delimiter, T &t) {
-    for (const auto &e: t) { write(delimiter, e); }
-    write("\n");
-}
-
-template<typename ...T>
-void printer(T &&... args) { ((cout << args << " "), ...); }
-
-#define error(args...) { string _s = #args; replace(_s.begin(), _s.end(), ',', ' '); stringstream _ss(_s); istream_iterator<string> _it(_ss); err(_it, args); }
-
-void err(istream_iterator<string> it) {}
-
-template<typename T, typename... Args>
-void err(istream_iterator<string> it, T a, Args... args) {
-    cerr << *it << " = " << a << endl;
-    err(++it, args...);
-}
+typedef long long LL;
+#define A first
+#define B second
+#define SZ(x) int(x.size())
+#define FR(i, a, b) for (int i = (a); i < (b); i++)
+#define FOR(i, b) FR(i, 0, b)
+#define PB push_back
+#define MP make_pair
+mt19937_64 rnd(chrono::steady_clock::now().time_since_epoch().count());
 
 double E = 0.0001;
-bool get(vector<double> a) {
+bool get(const vector<double>& a, int target = 24, bool only_int = true, bool verbose = true) {
+    if (only_int) {
+        for (auto& i : a) {
+            assert(abs(i - int(i)) <= E);
+        }
+    }
     int n = a.size();
     if (n == 1) {
-        return abs(a[0] - 24) <= E; // change target
+        return abs(a[0] - target) <= E; // change target
     }
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
             vector<double> b;
-            for (int k = 0; k < n; k++) if (k != i && k != j) b.eb(a[k]);
-            b.eb(a[i] + a[j]);
-            if (get(b)) {
-                cout << a[i] << " + " << a[j] << " = " << a[i] + a[j] << '\n';
+            for (int k = 0; k < n; k++) if (k != i && k != j) b.push_back(a[k]);
+            b.push_back(a[i] + a[j]);
+            if (get(b, target, only_int, verbose)) {
+                if (verbose) cout << a[i] << " + " << a[j] << " = " << a[i] + a[j] << '\n';
                 return true;
             }
             b.pop_back();
-            b.eb(a[i] - a[j]);
-            if (get(b)) {
-                cout << a[i] << " - " << a[j] << " = " << a[i] - a[j] << '\n';
+            b.push_back(a[i] - a[j]);
+            if (get(b, target, only_int, verbose)) {
+                if (verbose) cout << a[i] << " - " << a[j] << " = " << a[i] - a[j] << '\n';
                 return true;
             }
             b.pop_back();
-            b.eb(a[j] - a[i]);
-            if (get(b)) {
-                cout << a[j] << " - " << a[i] << " = " << a[j] - a[i] << '\n';
+            b.push_back(a[j] - a[i]);
+            if (get(b, target, only_int, verbose)) {
+                if (verbose) cout << a[j] << " - " << a[i] << " = " << a[j] - a[i] << '\n';
                 return true;
             }
             b.pop_back();
-            b.eb(a[i] / a[j]);
-            if (get(b)) {
-                cout << a[i] << " / " << a[j] << " = " << a[i] / a[j] << '\n';
+            b.push_back(a[i] / a[j]);
+            if (a[j] && (!only_int || (int(a[i]) % int(a[j]) == 0)) && get(b, target, only_int, verbose)) {
+                if (verbose) cout << a[i] << " / " << a[j] << " = " << a[i] / a[j] << '\n';
                 return true;
             }
             b.pop_back();
-            b.eb(a[j] / a[i]);
-            if (get(b)) {
-                cout << a[j] << " / " << a[i] << " = " << a[j] / a[i] << '\n';
+            b.push_back(a[j] / a[i]);
+            if (a[i] && (!only_int || (int(a[j]) % int(a[i]) == 0)) && get(b, target, only_int, verbose)) {
+                if (verbose) cout << a[j] << " / " << a[i] << " = " << a[j] / a[i] << '\n';
                 return true;
             }
             b.pop_back();
-            b.eb(a[j] * a[i]);
-            if (get(b)) {
-                cout << a[i] << " * " << a[j] << " = " << a[j] * a[i] << '\n';
+            b.push_back(a[j] * a[i]);
+            if (get(b, target, only_int, verbose)) {
+                if (verbose) cout << a[i] << " * " << a[j] << " = " << a[j] * a[i] << '\n';
                 return true;
             }
         }
@@ -98,9 +67,6 @@ bool get(vector<double> a) {
 }
 
 void solve_final() {
-    vector<double> a(4); //can change number of inputs
-    readc(a);
-    if (!get(a)) cout << "NO\n";
 }
 
 int main() {

@@ -4,10 +4,8 @@ struct segtree{
     int cnt;  // array size
     vector<F> t;
 
-    segtree() {}
-    void resize(int n) {
-        cnt = n;
-        t.resize(2 * n);
+    segtree(int cnt) : cnt(cnt) {
+        t.resize(2 * cnt);
     }
     
     inline F merge(F a, F b) {
