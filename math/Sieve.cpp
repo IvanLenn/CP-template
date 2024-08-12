@@ -1,7 +1,7 @@
 // Linear sieve
 
 vector<int> fac;
-vi prime;
+vector<int> prime;
 void init(int n) {
     fac.resize(n + 1);
     iota(fac.begin(), fac.end(), 0);

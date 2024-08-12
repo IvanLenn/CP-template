@@ -1,5 +1,5 @@
 int N = 100010;
-vl primechk(N), mu;
+vector<long long> primechk(N), mu;
 void init() {
     primechk[1] = 0;
     for (int i = 2; i <= N - 1 ; i++) {
