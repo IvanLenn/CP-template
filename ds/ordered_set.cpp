@@ -5,4 +5,6 @@ using namespace __gnu_pbds;
 
 ordered_set st;
 // st.insert(0);
+// st.size();
 // auto iter = st.find_by_order(idx);
+// int order = st.order_of_key(k);

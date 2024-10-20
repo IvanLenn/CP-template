@@ -4,8 +4,8 @@
 // ops: stack of operations, store for roll_back;
 
 struct DSU {
-    vi p, sz; //parent array and size array sz are strictly positive
-    vector<pi> ops;
+    vector<int> p, sz; //parent array and size array sz are strictly positive
+    vector<pair<int, int>> ops;
     void init(int n) {
         p.clear(); sz.clear();
         p.resize(n);
