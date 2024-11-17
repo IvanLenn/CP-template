@@ -95,6 +95,83 @@ int main() {
 }
 ```
 
+### Copy Constructor
+
+- Default copy constructor only "shallow" copies everything. Especially, only pointer itself but not the content at the pointer address.
+
+```cpp
+#include <iostream>
+#include <memory>
+
+class String {
+    char* m_Buffer;
+    unsigned int m_Size;
+public:
+    String(const char* string) {
+        m_Size = strlen(string);
+        m_Buffer = new char[m_Size + 1];
+        memcpy(m_Buffer, string, m_Size + 1);
+        m_Buffer[m_Size] = 0;
+    }
+    ~String() {
+        delete[] m_Buffer;
+    }
+    // What default copy constructor does
+    // String(const String& other) {
+    //     memcpy(this, &other, sizeof(String));
+    // }
+    char& operator[](unsigned int index) {
+        return m_Buffer[index];
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const String& s);
+};
+
+std::ostream& operator<<(std::ostream& stream, const String& s) {
+    stream << s.m_Buffer;
+    return stream;
+}
+
+int main() {
+    String string = "Apple";
+    String second = string;
+    second[0] = 'B';
+    std::cout << string << std::endl; // Bpple
+    std::cout << second << std::endl; // Bpple
+    // Will Crash here. Double free in destructor
+}
+```
+
+- Alternatively, define the copy constructor to initialize a new buffer memory.
+
+```cpp
+String(const String& other) : m_Size(other.m_Size) {
+    std::cout << "Copied" << std::endl;
+    m_Buffer = new char[m_Size + 1];
+    memcpy(m_Buffer, other.m_Buffer, m_Size + 1);
+}
+```
+
+- If we define a print function by passing in ```String``` or ```String&``` type:
+
+```cpp
+void Print(const String& string) { // Will call copy constructor 2 times more if only passing in String
+    std::cout << string << std::endl;
+}
+
+int main() {
+    String string = "Apple";
+    String second = string;
+    second[0] = 'B';
+    Print(string);
+    Print(second);
+    // This is possible if the type is const String& instead of String&. Can't bind rvalue to lvalue reference
+    Print("A");
+}
+```
+
+
+
 
 
 ### *this
@@ -304,6 +381,141 @@ int main() {
 }
 ```
 
+## Smart Pointer
+
+### Unique pointer
+
+- A scoped pointer: when out of scope will get deleted.
+- Can't copy a ***unique*** pointer. Can move a unique pointer.
+- Constructor of unique pointer is explicit.
+
+```cpp
+#include <iostream>
+#include <memory>
+
+class Entity {
+public:
+    Entity() {
+        std::cout << "Created Entity" << std::endl;
+    }
+    ~Entity() {
+        std::cout << "Destroyed Entity" << std::endl;
+    }
+    void Print() {}
+};
+
+int main() {
+    {
+        // std::unique_ptr<Entity> entity(new Entity());
+        std::unique_ptr<Entity> entity = std::make_unique<Entity>(); // Better for exception handling
+        // std::unique_ptr<Entity> e0 = entity; // Error. Copy constructor is deleted
+        entity->Print();
+    }
+    // entity no longer valid
+}
+```
+
+### Shared pointer
+
+- Uses reference counting: keep track of how many reference count exists to the object.
+- Can copy or move.
+
+```cpp
+#include <iostream>
+#include <memory>
+
+class Entity {
+public:
+    Entity() {
+        std::cout << "Created Entity" << std::endl;
+    }
+    ~Entity() {
+        std::cout << "Destroyed Entity" << std::endl;
+    }
+    void Print() { std::cout << "Random" << std::endl; }
+};
+
+int main() {
+    std::shared_ptr<Entity> e0;
+    {
+        std::shared_ptr<Entity> sharedEntity = std::make_shared<Entity>();
+        // std::shared_ptr<Entity> sharedEntity(new Entity()); // Ok, but not efficient.
+        e0 = sharedEntity;
+    }
+    e0 -> Print();
+}
+```
+
+### Weak pointer
+
+- Assign shared pointer to weak pointer will not increase reference count.
+- Great for if we don't want take ownership of object.
+- Can break circular dependency caused by ```shared_ptr```.
+- ```e0.lock()``` returns a rvalue of type ```std::shared_ptr<Entity>```
+
+```cpp
+#include <iostream>
+#include <memory>
+
+class Entity {
+public:
+    Entity() {
+        std::cout << "Created Entity" << std::endl;
+    }
+    ~Entity() {
+        std::cout << "Destroyed Entity" << std::endl;
+    }
+    void Print() { std::cout << "Random" << std::endl; }
+};
+
+int main() {
+    std::weak_ptr<Entity> e0;
+    {
+        std::shared_ptr<Entity> sharedEntity = std::make_shared<Entity>();
+        e0 = sharedEntity;
+        if (auto sharedE0 = e0.lock()) {
+            sharedE0 -> Print();
+        }
+    }
+    assert(!e0.lock());
+}
+```
+
+## Standard template library
+
+- Data type that the container contains is for users to decide.
+
+### Vector
+
+- `push_back()` creates a temporary object and then moves or copies it into the vector.
+- `emplace_back()` constructs the object directly inside the vector, avoiding the creation of a temporary object.
+- `reserve` will allocate memory but doesn't construct any objects.
+
+```cpp
+#include <iostream>
+#include <vector>
+
+struct Vec3 {
+    float x, y, z;
+    Vec3(int x, int y, int z) : x(x), y(y), z(z) {
+        std::cout << "Constructed" << std::endl;
+    }
+    Vec3(const Vec3& other) : x(other.x), y(other.y), z(other.z) {
+        std::cout << "Copied" << std::endl;
+    }
+};
+
+int main() {
+    std::vector<Vec3> v;
+    v.reserve(3); // Can save 3 copy constructs b/c no need to resize & copy
+    v.push_back(Vec3(7, 8, 9));
+    v.push_back(Vec3(7, 8, 9));
+    v.push_back(Vec3(7, 8, 9));
+}
+```
+
+
+
 ## Const
 
 ### General usage
@@ -347,41 +559,41 @@ int main() {
 
 ```cpp
 #include <iostream>
-class Entity {
-public:
-    int X;
-    int* Y;
-    // This also doesn't compile because the returned reference can potentially modify X
-    // int& GetX() const {
-    //     return X;
-    // }
-    const int& GetX() const {  // OK
-        return X;
+#include <vector>
+
+struct Vec3 {
+    float x, y, z;
+    Vec3(int x, int y, int z) : x(x), y(y), z(z) {
+        std::cout << "Constructed" << std::endl;
     }
-    const int* GetX2() const { // OK
-        return &X;
-    }
-		
-  	// It's okay as long as not modifying Y directly. But client can still modify *Y
-    // Not good
-    // int* GetY2() const {
-    //     return Y;
-    // }
-  
-    const int* GetY() const {
-        return Y;
+    Vec3(const Vec3& other) : x(other.x), y(other.y), z(other.z) {
+        std::cout << "Copied" << std::endl;
     }
 };
 
 int main() {
-    Entity T;
-    T.X = 1;
-    T.Y = new int(1);
-    // Can get away with const though. But it's bad practice
-    int* y = (int*)T.GetY();
-    *y = 2;
-    printf("%d", *T.Y);
+    {
+        std::vector<Vec3> v; // 3 default constructor + 6 copy constructor
+        v.push_back(Vec3(7, 8, 9));
+        v.push_back(Vec3(7, 8, 9));
+        v.push_back(Vec3(7, 8, 9));
+    }
+    {
+        std::vector<Vec3> v;
+        v.reserve(3); // Can save 3 copy constructs b/c no need to resize & copy
+        v.push_back(Vec3(7, 8, 9));
+        v.push_back(Vec3(7, 8, 9));
+        v.push_back(Vec3(7, 8, 9));
+    }
+    {
+        std::vector<Vec3> v;
+        v.reserve(3);
+        v.emplace_back(7, 8, 9); // No copy constructor at all b/c we are constructing them directly
+        v.emplace_back(7, 8, 9);
+        v.emplace_back(7, 8, 9);
+    }
 }
+
 ```
 
 - Similarly, can't call non-const class methods for a const reference to a class (or any other similar cases).
@@ -451,6 +663,7 @@ int main() {
 - Stack allocation: 
   - Easier, faster, no need to free
   - Limited size, will be invalidated when out of scope (end of block, etc,)
+  - Useful in case of timer / smart pointer that does automatic heap delete when out of scope.
 - Heap allocation:
   - Larger size possible, lifetime can be as long as possible
 
@@ -543,6 +756,34 @@ int main() {
     Vec2 res = pos + speed * 2.0f;
     std::cout << res << std::endl;
     assert(res != Vec2(2.1f, 4.0f));
+}
+```
+
+- Overloading the arrow operator
+  - `entity->Print()` is interpreted by the compiler as `(entity.operator->())->Print();`
+
+```cpp
+#include <iostream>
+#include <memory>
+
+class Entity {
+public:
+    int x;
+    void Print() const { std::cout << "Hi" << std::endl;}
+};
+
+class ScopedPtr {
+private:
+    Entity* m_Obj;
+public:
+    ScopedPtr(Entity* obj) : m_Obj(obj) {}
+    ~ScopedPtr() { delete m_Obj; }
+    Entity* operator->() const { return m_Obj; }
+};
+
+int main() {
+    const ScopedPtr entity = new Entity();
+    entity->Print();
 }
 ```
 
@@ -667,7 +908,23 @@ int main() {
 }
 ```
 
+## Arraw operator
 
+- Getting offset location
+
+```cpp
+#include <iostream>
+#include <memory>
+
+struct Vec3 {
+    float x, y, z;
+};
+
+int main() {
+    long long offset = (long long)&((Vec3*)nullptr)->z;
+    std::cout << offset << std::endl; // 8
+}
+```
 
 ## Enum
 
