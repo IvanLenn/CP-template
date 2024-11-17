@@ -20,6 +20,7 @@ int main() {
 
 ## Reference
 
+- A reference is the content itself. If pass into function by reference, you are the object itself.
 - Must initialize, and immutable
 
 ```C++
@@ -51,7 +52,7 @@ int main() {
 #include <iostream>
 class Log {
     int x;
-    public:
+public:
     Log() = delete;
     Log(int x) : x(x) {}
 };
@@ -70,7 +71,7 @@ int main() {
 ```cpp
 #include <iostream>
 class Entity {
-    public:
+public:
     float X, Y;
     void Move(float xa, float ya) {
         X += xa; Y += ya;
@@ -99,13 +100,13 @@ int main() {
 ```cpp
 #include <iostream>
 class Entity {
-    public:
+public:
     std::string GetName() {return "Entity";} // Change to virtual std::string GetName() {return "Entity";}
 };
 class Player : public Entity {
-    private:
+private:
     std::string m_Name;
-    public:
+public:
     Player(const std::string& name) : m_Name(name) {}
     std::string GetName() {return m_Name;} // Change to std::string GetName() override {return m_Name;}
 };
@@ -130,16 +131,16 @@ int main() {
 ```cpp
 #include <iostream>
 class Printable {
-    public:
+public:
     virtual void print() = 0;
 };
 
 class Entity : public Printable{
-    public:
+public:
     void print() override {std::cout << "Entity" << std::endl;}
 };
 class Player : public Entity {
-    public:
+public:
     void print() override {std::cout << "Player" << std::endl;}
 };
 
@@ -233,7 +234,151 @@ int main() {
 }
 ```
 
-### Array
+## Const
+
+### General usage
+
+- Can get away const restrictions. Example below:
+
+```cpp
+#include <iostream>
+int main() {
+    const int MX = 100;
+    int* a = (int*)&MX;
+    // *a = 1; // Undefined behavior. Likely compiler will optimize and substitute 100 for all MX occurence
+    printf("%d\n%d\n", *a, MX); // Could output 1, 100
+}
+```
+
+- Const F* / F const*: a pointer to type of const F. Can change the pointer itself but not the value it is pointing to.
+- F* const: The pointer itself is const. Can change the value the pointer points to.
+
+```cpp
+int main() {
+    const int* a = new int(5);
+    int const* b = new int(5);
+    // *a = 1; *b = 1; // Not OK
+    a = nullptr; b = nullptr;
+
+    int* const c = new int(5);
+    *c = 1;
+    // c = nullptr; // Not OK
+
+    const int* const d = new int(5);
+    // *d = 1; d = nullptr; // Not OK
+
+    delete a; delete b; delete c; delete d;
+}
+```
+
+### Class usage
+
+- Const after method: the method will not modify members of class. The const will also prevent all potential modifications. Example below:
+
+```cpp
+#include <iostream>
+class Entity {
+public:
+    int X;
+    int* Y;
+    // This also doesn't compile because the returned reference can potentially modify X
+    // int& GetX() const {
+    //     return X;
+    // }
+    const int& GetX() const {  // OK
+        return X;
+    }
+    const int* GetX2() const { // OK
+        return &X;
+    }
+		
+  	// It's okay as long as not modifying Y directly. But client can still modify *Y
+    // Not good
+    // int* GetY2() const {
+    //     return Y;
+    // }
+  
+    const int* GetY() const {
+        return Y;
+    }
+};
+
+int main() {
+    Entity T;
+    T.X = 1;
+    T.Y = new int(1);
+    // Can get away with const though. But it's bad practice
+    int* y = (int*)T.GetY();
+    *y = 2;
+    printf("%d", *T.Y);
+}
+```
+
+- Similarly, can't call non-const class methods for a const reference to a class (or any other similar cases).
+
+```cpp
+#include <iostream>
+class Entity {
+public:
+    int X;
+    int getX() {return X;}
+    int getX2() const {return X;}
+};
+
+void PrintEntity(const Entity& e) {
+    // std::cout << e.getX() << std::endl; Can't do. Must declare Entity::getX const
+    std::cout << e.getX2() << std::endl; // OK
+}
+```
+
+## Mutable
+
+### Class scenario
+
+- Can change mutable variables in const member methods
+- Similarly, can return reference / pointers to mutable objects
+
+```cpp
+class Entity {
+private:
+    std::string m_Name;
+    mutable int m_DebugCount = 0;
+public:
+    const std::string& GetName() {
+        m_DebugCount++;
+        return m_Name;
+    }
+};
+```
+
+### General scenario
+
+- Rare case: lambda capture variables by value. Need mutable to change the copy of variables captured by value.
+
+```cpp
+#include <iostream>
+
+int main() {
+    int x = 8;
+    // This lambda captures everything by value, so all external variables will mark as const
+    // auto f = [=]() {
+    //     x++;
+    //     std::cout << x << std::endl;
+    // };
+
+    // By marking lambda as mutable, we can modify the copy of x. Original x is not changed.
+    auto f = [=]() mutable {
+        x++;
+        std::cout << x << std::endl;
+    };
+    f();
+    assert(x == 8);
+}
+```
+
+
+
+## Array
 
 - Allocate arrays on stack or heap
 
@@ -262,6 +407,32 @@ int main() {
   for (int i = 0; i < 5; i++) a[i] = i;
   int* ptr = a;
   assert(*(ptr + 2) == 2); // Equivalently, assert(*(int*)((char*)ptr + 8) == 2);
+}
+```
+
+## String (literal)
+
+- Any strings with quota are string literals. String literal always stores in read-only memory. Undefined behavior to modify it.
+- Utf-32 char, for example, has type char32_t.
+- wchar_t occupies 2 or 4 bytes depending on systems.
+
+```cpp
+#include <iostream>
+int main() {
+    char s[6] = "Apple";
+    s[0] = 'B';
+    printf("%s", s); // OK, Bpple
+
+    char* t = "Apple";
+    t[0] = 'B'; // Undefined behavior. Dependent on compiler
+    printf("%s", t); 
+  
+  	const wchar_t* x = L"Apple";
+    const char16_t* y = u"Apple";
+    const char32_t* z = U"Apple";
+
+    // const char* r = "Apple";
+    // r[0] = 'B'; // Can't modify const char
 }
 ```
 
