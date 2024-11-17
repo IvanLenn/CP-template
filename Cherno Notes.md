@@ -62,6 +62,76 @@ int main() {
 }
 ```
 
+#### Initializer list
+
+- Makes constructor logic clear. Separate variable initialization with meaningful code.
+- Avoid constructing members twice. The default initializer list will intialize everything by default.
+
+```cpp
+#include <iostream>
+
+class Entity {
+public:
+    int x;
+    Entity() = delete;
+    Entity(int x) : x(x) {}
+};
+
+class T {
+public:
+    Entity X;
+    // T() { // Not OK. Default constructor of Entity not found
+    //     X = Entity(1);
+    // }
+    T(Entity& e) : X(e) {
+        X.x = 1;
+    }
+};
+
+int main() {
+    Entity e(2);
+    T t(e);
+    assert(e.x = 2); // Due to default copy constructor, value of e.x is unchanged
+}
+```
+
+
+
+### *this
+
+- Only present inside methods. Is a pointer to the current object itself.
+- Type of ***this*** is ```class*``` or ```const class*``` depending on whether the method has const. It is ***never*** ```class* const``` or ```const class* const```.
+- Pointer ***this*** is not an lvalue.
+- **Question: Why can't modify value of this if it's not const after \*? This makes sense intuitively, but not logically. Perhaps same as 5 = 3 is incorrect although 5 is not const int? **
+
+```cpp
+#include <iostream>
+
+void PrintEntity(const Entity& e);
+
+class Entity {
+    public:
+    int x, y;
+    Entity(int x, int y) {
+        // Entity* e = this;        // Ok.
+        // Entity* const& e = this; // Ok. Making sure we can't modify this directly
+        this->x = x;
+        this->y = y;
+        PrintEntity(*this);
+    }
+    int GetX() const {
+        // const Entity* e = this; // Ok. Review const :)
+        return this->x;
+    }
+};
+
+void PrintEntity(const Entity& e) {
+    // Print
+}
+```
+
+
+
 ### Inheritance
 
 - Mostly useful to avoid code duplication
@@ -165,7 +235,7 @@ int main() {
 - Private: only this entity class or classes or functions with friend keyword can access private members.
 - Protected: this entity class and all subclasses along the hierarchy can also access members.
 - Nothing to do with performance or computer understanding. Purely for human-understandability.
-  - Eg. User should NOT use private members and only stick with interface
+  - Eg. User should ***not*** use private members and only stick with interface
 
 ### Static
 
@@ -250,8 +320,8 @@ int main() {
 }
 ```
 
-- Const F* / F const*: a pointer to type of const F. Can change the pointer itself but not the value it is pointing to.
-- F* const: The pointer itself is const. Can change the value the pointer points to.
+- ```Const F*``` or ```F const*```: a pointer to type of const F. Can change the pointer itself but not the value it is pointing to.
+- ```F* const```: The pointer itself is const. Can change the value the pointer points to.
 
 ```cpp
 int main() {
@@ -376,7 +446,168 @@ int main() {
 }
 ```
 
+## Memory
 
+- Stack allocation: 
+  - Easier, faster, no need to free
+  - Limited size, will be invalidated when out of scope (end of block, etc,)
+- Heap allocation:
+  - Larger size possible, lifetime can be as long as possible
+
+```cpp
+#include <iostream>
+#include <string>
+
+class Entity {
+    std::string m_Name;
+public:
+    Entity() : m_Name("Unknown") {}
+    Entity(const std::string& name) : m_Name(name) {}
+    const std::string& GetName() const {return m_Name;}
+};
+
+int main() {
+    Entity *a, *b;
+    {
+        a = new Entity("Apple"); // Heap allocation
+        Entity e;                // Stack allocation
+        b = &e;
+    }
+    // std::cout << b->GetName() << std::endl; // Undefined behavior
+    std::cout << a->GetName() << std::endl;
+    delete a;
+}
+```
+
+### New
+
+- New will allocate memory using malloc (sizeof(class) * len) and call the class constructor.
+- Must use delete for every new with exactly the same pointer.
+- In C++11 or later, if the argument list is shorter than allocated length, all the rest are default constructed.
+
+```cpp
+#include <iostream>
+#include <cassert>
+
+class Entity {
+    std::string m_Name;
+public:
+    Entity() : m_Name("Unknown") {}
+    Entity(const std::string& name) : m_Name(name) {}
+    const std::string& GetName() const {return m_Name;}
+};
+
+int main() {
+    Entity *a = new Entity[2];
+    assert(a[1].GetName() == "Unknown");
+    delete[] a;
+
+    Entity *b = new Entity[2]{std::string("Apple"), std::string("Banana")};
+    assert(b[0].GetName() == "Apple");
+    assert(b[1].GetName() == "Banana");
+    delete[] b;
+}
+```
+
+## Operator (overloading)
+
+```cpp
+#include <iostream>
+#include <cassert>
+
+struct Vec2 {
+    float x, y;
+    Vec2(float x, float y) : x(x), y(y) {}
+    Vec2 operator+(const Vec2& other) const {
+        return Vec2(x + other.x, y + other.y);
+    }
+    Vec2 operator*(const float mul) const {
+        return Vec2(x * mul, y * mul);
+    }
+    bool operator==(const Vec2& other) const {
+        return x == other.x && y == other.y;
+    }
+    bool operator!=(const Vec2& other) const {
+        return !operator==(other);
+    }
+};
+
+std::ostream& operator<<(std::ostream& stream, const Vec2& other) {
+    stream << other.x << ", " << other.y;
+    return stream;
+}
+
+int main() {
+    Vec2 pos(1.0f, 1.0f);
+    Vec2 speed(0.5f, 1.5f);
+    Vec2 res = pos + speed * 2.0f;
+    std::cout << res << std::endl;
+    assert(res != Vec2(2.1f, 4.0f));
+}
+```
+
+
+
+## Conversion
+
+### Implicit conversion
+
+- Compiler automatially converts types
+
+- Compiler will only perform implicit conversion ***once*** at a time. See example below:
+
+```cpp
+#include <iostream>
+#include <cassert>
+
+class Entity {
+    std::string m_Name;
+    int m_Age;
+public:
+    Entity(int age) : m_Name("Unknown"), m_Age(age) {}
+    Entity(const std::string& name) : m_Name(name), m_Age(-1) {}
+};
+
+void PrintEntity(const Entity& e) {
+    // Print
+}
+
+int main() {
+    Entity a("Apple"); // Ok. 1 implicit conversion: const char* to std::string
+    Entity b(5);
+    PrintEntity(10); // OK. Converts 10 to Entity b/c of constructor
+    // Error. "Apple" : const char* can't convert to Entity. 2 implicit conversions required.
+    // PrintEntity("Hi");
+}
+```
+
+### Explicit
+
+- Put in front of constructor so that it must be explicitly called. See example below:
+
+```cpp
+#include <iostream>
+#include <cassert>
+
+class Entity {
+    std::string m_Name;
+    int m_Age;
+public:
+    explicit Entity(int age) : m_Name("Unknown"), m_Age(age) {}
+    Entity(const std::string& name) : m_Name(name), m_Age(-1) {}
+};
+
+void PrintEntity(const Entity& e) {
+    // Print
+}
+
+int main() {
+    // PrintEntity(10); // Error. This constructor is explicit
+    PrintEntity(Entity(10)); // Ok. 
+    // Ok. This constructor can perform implicit conversion from std::string to Entity
+    PrintEntity(std::string("Apple"));
+} 
+```
 
 ## Array
 
