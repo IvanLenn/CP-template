@@ -319,6 +319,7 @@ int main() {
 - Static in class share memory with all instances of class
   - Static methods can't access non-static variables
   - Only non-static methods get the class itself as hidden parameters. 
+  - Extend lifetime of static variables insid class functions.
 
 ```cpp
 #include <iostream>
@@ -506,11 +507,26 @@ struct Vec3 {
 };
 
 int main() {
-    std::vector<Vec3> v;
-    v.reserve(3); // Can save 3 copy constructs b/c no need to resize & copy
-    v.push_back(Vec3(7, 8, 9));
-    v.push_back(Vec3(7, 8, 9));
-    v.push_back(Vec3(7, 8, 9));
+    {
+        std::vector<Vec3> v; // 3 default constructor + 6 copy constructor
+        v.push_back(Vec3(7, 8, 9));
+        v.push_back(Vec3(7, 8, 9));
+        v.push_back(Vec3(7, 8, 9));
+    }
+    {
+        std::vector<Vec3> v;
+        v.reserve(3); // Can save 3 copy constructs b/c no need to resize & copy
+        v.push_back(Vec3(7, 8, 9));
+        v.push_back(Vec3(7, 8, 9));
+        v.push_back(Vec3(7, 8, 9));
+    }
+    {
+        std::vector<Vec3> v;
+        v.reserve(3);
+        v.emplace_back(7, 8, 9); // No copy construct at all
+        v.emplace_back(7, 8, 9);
+        v.emplace_back(7, 8, 9);
+    }
 }
 ```
 
@@ -612,6 +628,56 @@ void PrintEntity(const Entity& e) {
     std::cout << e.getX2() << std::endl; // OK
 }
 ```
+
+## Template
+
+- Get the compiler to write code given the rules (types).
+- `template<typename T>` and `template<class T>` are interchangable.
+- If we didn't use template function, the compiler does nothing. Even not compilation error.
+- Otherwise, the compiler will create multiple versions of template functions for each type we used.
+
+```cpp
+#include <iostream>
+#include <vector>
+
+template<typename T> // Almost interchangable with template<class T>
+void Foo(T value) {
+    Not used. Not even compilation error.
+}
+
+template<typename T> // Almost interchangable with template<class T>
+void Print(T value) {
+    std::cout << value << std::endl;
+}
+
+int main() {
+    Print<int>(5);
+    Print("Apple"); 
+}
+```
+
+- Non-type template parameters must be compile-time constants. This means their values must be known at compile time.
+
+```cpp
+#include <iostream>
+#include <vector>
+
+// Not only can we pass in types
+template<typename T, int N>
+class Array {
+private:
+    T m_Array[N];
+public:
+    int GetSize() const { return N; }
+};
+
+int main() {
+    Array<std::string, 5> array;
+    std::cout << array.GetSize() << std::endl;
+}
+```
+
+
 
 ## Mutable
 
