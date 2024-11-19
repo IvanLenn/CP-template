@@ -18,6 +18,64 @@ int main() {
 }
 ```
 
+### Function pointer
+
+- Assign a function to variable; pass functions into other functions as parameters.
+- Function-to-Pointer Decay: In C++, when you use a function name in most contexts, it automatically decays (converts) to a pointer to that function.
+
+```cpp
+#include <iostream>
+
+void HelloWorld() {
+    static int i = 1;
+    std::cout << i++ << std::endl;
+}
+
+int main() {
+    // In all examples, with or without & doesn't matter b/c of function-to-pointer decay
+    // #1
+    void(*f1)();
+    f1 = &HelloWorld;
+    // #2
+    auto f2 = &HelloWorld;
+    // #3
+    void (*f3)() = HelloWorld;
+    // #4
+    typedef void(*add)();
+    add f4 = &HelloWorld;
+    // #5
+    std::function<void()> f5 = HelloWorld;
+    f1(); f2(); f3(); f4(); f5(); // 1 2 3 4 5
+}
+```
+
+- `std::function` is more flexible and can work with various callable objects, not just function pointers.
+
+```cpp
+#include <iostream>
+#include <vector>
+
+void ForLoop(const std::vector<int>& values, void(*func)(int)) {
+    for (int value : values) {
+        func(value);
+    }
+}
+
+void ForLoop2(const std::vector<int>& values, std::function<void(int)> func) {
+    for (int value : values) {
+        func(value);
+    }
+}
+
+int main() {
+    std::vector<int> val = {1, 5, 4, 1, 8};
+    ForLoop(val, [](int val){ std::cout << val << std::endl; });
+    ForLoop2(val, [](int val){ std::cout << val << std::endl; });
+}
+```
+
+
+
 ## Reference
 
 - A reference is the content itself. If pass into function by reference, you are the object itself.
@@ -677,6 +735,74 @@ int main() {
 }
 ```
 
+## Lambda functions
+
+- Whenever we have a function pointer, we can use lambda.
+- Raw function pointers cannot capture state or context. Need to use `std::function`instead.
+
+```cpp
+#include <iostream>
+#include <vector>
+
+void ForLoop(const std::vector<int>& values, void(*func)(int)) {
+    for (int value : values) {
+        func(value);
+    }
+}
+
+void ForLoop2(const std::vector<int>& values, std::function<void(int)> func) {
+    for (int value : values) {
+        func(value);
+    }
+}
+
+int main() {
+    std::vector<int> val = {1, 5, 4, 1, 8};
+    int a = 5;
+    ForLoop(val, [](int val){ std::cout << val << std::endl; });
+    // ForLoop(val, [=](int val){ std::cout << val << std::endl; }); // Not OK
+    ForLoop2(val, [](int val){ std::cout << val << std::endl; });
+    ForLoop2(val, [=](int val){ std::cout << val << std::endl; }); // OK
+}
+```
+
+
+
+## Auto
+
+- Compiler will automatically deduct the type of variables for you.
+- Useful in case of changing API doesn't need to change client code.
+- It's not going to capture `const` or `reference`. Need to use them explicitly for example `const auto&`.
+
+```cpp
+#include <iostream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+
+class A{};
+class AManager{
+private: 
+    std::unordered_map<std::string, std::vector<A*>> mp;
+public:
+    const std::unordered_map<std::string, std::vector<A*>>& Get() { return mp; }
+};
+
+int main() {
+    std::vector<std::string> str;
+    str.push_back("Apple");
+    str.push_back("Orange");
+    // Use auto instead of std::vector<std::string>::iterator
+    for (auto it = str.begin(); it < str.end(); it++) {
+        std::cout << *it << std::endl;
+    }
+
+    AManager T;
+    const auto& mp = T.Get();
+    assert(mp.empty());
+}
+```
+
 
 
 ## Mutable
@@ -727,11 +853,12 @@ int main() {
 ## Memory
 
 - Stack allocation: 
-  - Easier, faster, no need to free
+  - Easier, faster, no need to free. Literally just moving stack pointer for memory allocated.
   - Limited size, will be invalidated when out of scope (end of block, etc,)
   - Useful in case of timer / smart pointer that does automatic heap delete when out of scope.
 - Heap allocation:
   - Larger size possible, lifetime can be as long as possible
+  - A lot CPU cycles. Need to go through the free list and allocate memory.
 
 ```cpp
 #include <iostream>
@@ -757,6 +884,8 @@ int main() {
     delete a;
 }
 ```
+
+- Both stack and heap memory are in RAM, just stack is usually smaller (~2MB).
 
 ### New
 
@@ -916,6 +1045,29 @@ int main() {
 } 
 ```
 
+## Macro
+
+- During preprocess compiler expands macros. Can replace text in out code ***before compilation***.
+
+- Can separate debug and release mode.
+
+```cpp
+#include <iostream>
+#include <string>
+
+#ifdef DEBUG
+#define LOG(x) std::cout << x << std::endl
+#else
+#define LOG(X)
+#endif
+
+// Run with g++ ${file}.cpp -o ${file} -std=c++17 -Wall -Wextra -O3 -DDEBUG
+//  Or with g++ ${file}.cpp -o ${file} -std=c++17 -Wall -Wextra -O3
+int main() {
+    LOG("Hello");
+}
+```
+
 ## Array
 
 - Allocate arrays on stack or heap
@@ -934,8 +1086,6 @@ int main() {
 }
 ```
 
-
-
 ```cpp
 #include <iostream>
 #include <cassert>
@@ -947,6 +1097,10 @@ int main() {
   assert(*(ptr + 2) == 2); // Equivalently, assert(*(int*)((char*)ptr + 8) == 2);
 }
 ```
+
+### Static array
+
+- Size need to know during compiler time. No performance code, and can keep track of size.
 
 ## String (literal)
 
