@@ -364,6 +364,63 @@ int main() {
 }
 ```
 
+- Derived class need to call base class contructor in the initializer list.
+- If using pointers, we need to define virtual constructor for base classes with virtual functions. The reason is potentially we might cast it to base pointers and then the destructors can't be correctly called.
+- When a derived class object is destroyed, the destructors are called in reverse order of the inheritance hierarchy. The derived class destructor is called first, followed by the base class destructor.
+
+```cpp
+#include <iostream>
+
+class BaseClass {
+protected:
+    int x = 0;
+public:
+    BaseClass(int x) : x(x) {
+        std::cout << "Base created" << std::endl;
+    }
+    virtual void Test() = 0;
+    virtual ~BaseClass() {
+        std::cout << "Base deleted" << std::endl;
+    }
+
+};
+
+class TestClass : public BaseClass {
+public:
+    TestClass(int x) : BaseClass(x) {
+        std::cout << "Test created" << std::endl;
+    }
+    void Test() override {
+        std::cout << x << std::endl;
+    }
+    ~TestClass() override {
+        std::cout << "Test deleted" << std::endl;
+    }
+};
+
+class ProduceClass : public BaseClass {
+public:
+    ProduceClass(int x) : BaseClass(x) {
+        std::cout << "Produce created" << std::endl;
+    }
+    void Test() override {
+        // Nothing
+    }
+    ~ProduceClass() override {
+        std::cout << "Produce deleted" << std::endl;
+    }
+};
+
+int main() {
+    TestClass* T = new TestClass(5);
+    ProduceClass* F = new ProduceClass(5);
+    T->Test(); F->Test();
+    delete T; delete F;
+}
+```
+
+
+
 ### Visibility
 
 - Default visibility is private for class, and public for struct.
@@ -766,8 +823,6 @@ int main() {
 }
 ```
 
-
-
 ## Auto
 
 - Compiler will automatically deduct the type of variables for you.
@@ -800,6 +855,50 @@ int main() {
     AManager T;
     const auto& mp = T.Get();
     assert(mp.empty());
+}
+```
+
+
+
+## Thread
+
+- Calling join() waits for the thread to finish execution before continuing. If you don't join or detach a thread, and the std::thread object is destroyed, the program will terminate (`std::terminate` is called).
+- Threads can communicate via shared memory, message queues, signals, etc,.
+
+```cpp
+#include <iostream>
+#include <thread>
+#include <vector>
+
+static bool s_Finished = false;
+int t;
+
+void DoWork() {
+    using namespace std::literals::chrono_literals;
+    std::cout << "Thread id=" << std::this_thread::get_id() << std::endl;
+    while (!s_Finished) {
+        std::cout << "Working...\n";
+        std::this_thread::sleep_for(1s);
+    }
+}
+
+void Work(int i) {
+    std::cout << t++ << std::endl;
+}
+
+int main() {
+    std::thread worker(DoWork);
+    std::cin.get();
+    s_Finished = true;
+    worker.join(); // Main process will block until thread returns.
+    std::cout << "Finished." << std::endl;
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i < 5; i++) {
+        threads.emplace_back(Work, i);
+    }
+    for (auto& thread : threads) thread.join();
+    std::cout << "Finished" << std::endl;
 }
 ```
 
