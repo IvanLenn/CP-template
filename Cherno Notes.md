@@ -1227,6 +1227,42 @@ int main() {
 }
 ```
 
+## Namespace
+
+- Main purpose is to avoid naming conflicts.
+- Can create aliases for namespace, or just specify a function inside namespace.
+
+```cpp
+#include <iostream>
+
+namespace apple {
+    void print(const char* text) {
+        std::string tmp = text;
+        std::cout << tmp << std::endl;
+    }
+}
+
+
+namespace orange {
+    void print(const char* text) {
+        std::string tmp = text;
+        std::reverse(tmp.begin(), tmp.end());
+        std::cout << tmp << std::endl;
+    }
+}
+
+int main() {
+    namespace A = apple;
+    A::print("palindrome");
+    orange::print("palindrome"); // from orange namespace
+    using apple::print;
+    print("palindrome");
+    orange::print("palindrome");
+}
+```
+
+
+
 ## Arraw operator
 
 - Getting offset location
