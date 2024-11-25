@@ -1201,6 +1201,144 @@ int main() {
 
 - Size need to know during compiler time. No performance code, and can keep track of size.
 
+### Raw multi-dimentional array:
+
+- Not optimizing memory or cache locality.
+
+```cpp
+#include <iostream>
+
+struct Timer{
+    std::chrono::time_point<std::chrono::steady_clock> start;
+    std::chrono::duration<float> duration;
+    Timer() {
+        start = std::chrono::high_resolution_clock::now();
+    }
+    ~Timer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        duration = end - start;
+        float ms = duration.count() * 1000.0f;
+        std::cout << "Timer took " << ms << "ms " << std::endl;
+    }
+};
+
+int rnd() {
+    static int rd = 1;
+    rd = (rd * 47 + 23) % 998243;
+    return rd;
+}
+
+int main() {
+    const int H = 1000, W = 20, D = 400;
+    // 3D array :)
+    int*** a3d = new int**[H];
+    for (int i = 0; i < H; i++) {
+        a3d[i] = new int*[W];
+        for (int j = 0; j < W; j++) {
+            a3d[i][j] = new int[D];
+        }
+    }
+    // Using smart pointer
+    auto ua3d = std::make_unique<std::unique_ptr<std::unique_ptr<int[]>[]>[]>(H);
+    for (int i = 0; i < H; i++) {
+        ua3d[i] = std::make_unique<std::unique_ptr<int[]>[]>(W);
+        for (int j = 0; j < W; j++) {
+            ua3d[i][j] = std::make_unique<int[]>(D);
+        }
+    }
+    Timer* T = new Timer;
+    for (int i = 0; i < H; i++) {
+        for (int j = 0; j < W; j++) {
+            for (int k = 0; k < D; k++) {
+                a3d[i][j][k] = rnd();
+            }
+        }
+    }
+    int sum = 0;
+    for (int i = 0; i < H; i++) {
+        for (int j = 0; j < W; j++) {
+            for (int k = 0; k < D; k++) {
+                sum = (sum + a3d[i][j][k]) % 998244353;
+            }
+        }
+    }
+    std::cout << sum << std::endl;
+    delete T;
+    for (int i = 0; i < H; i++) {
+        for (int j = 0; j < W; j++) {
+            delete[] a3d[i][j];
+        }
+        delete[] a3d[i];
+    }
+    delete[] a3d;
+}
+```
+
+- Optimized version. ***But not faster?***
+
+```cpp
+#include <iostream>
+
+struct Timer{
+    std::chrono::time_point<std::chrono::steady_clock> start;
+    std::chrono::duration<float> duration;
+    Timer() {
+        start = std::chrono::high_resolution_clock::now();
+    }
+    ~Timer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        duration = end - start;
+        float ms = duration.count() * 1000.0f;
+        std::cout << "Timer took " << ms << "ms " << std::endl;
+    }
+};
+
+int rnd() {
+    static int rd = 1;
+    rd = (rd * 47 + 23) % 998243;
+    return rd;
+}
+
+int main() {
+    const int H = 1000, W = 20, D = 400;
+    // 3D array :)
+    int* data = new int[H * W * D];
+    int*** a3d = new int**[H];
+    for (int i = 0; i < H; i++) {
+        a3d[i] = new int*[W];
+        for (int j = 0; j < W; j++) {
+            a3d[i][j] = &data[i * W * D + j * D];
+        }
+    }
+
+    Timer* T = new Timer;
+    for (int i = 0; i < H; i++) {
+        for (int j = 0; j < W; j++) {
+            for (int k = 0; k < D; k++) {
+                a3d[i][j][k] = rnd();
+            }
+        }
+    }
+    int sum = 0;
+    for (int i = 0; i < H; i++) {
+        for (int j = 0; j < W; j++) {
+            for (int k = 0; k < D; k++) {
+                sum = (sum + a3d[i][j][k]) % 998244353;
+            }
+        }
+    }
+    std::cout << sum << std::endl;
+    delete T;
+    for (int i = 0; i < H; i++) {
+        delete[] a3d[i];
+    }
+    delete[] a3d;
+    delete[] data;
+}
+```
+
+
+
 ## String (literal)
 
 - Any strings with quota are string literals. String literal always stores in read-only memory. Undefined behavior to modify it.
@@ -1258,6 +1396,41 @@ int main() {
     using apple::print;
     print("palindrome");
     orange::print("palindrome");
+}
+```
+
+## Timing
+
+- Trick to automate timer with stack objects
+
+```cpp
+#include <iostream>
+#include <chrono>
+#include <thread>
+
+struct Timer{
+    std::chrono::time_point<std::chrono::steady_clock> start;
+    std::chrono::duration<float> duration;
+    Timer() {
+        start = std::chrono::high_resolution_clock::now();
+    }
+    ~Timer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        duration = end - start;
+        float ms = duration.count() * 1000.0f;
+        std::cout << "Timer took " << ms << "ms " << std::endl;
+    }
+};
+
+void f() {
+    Timer timer;
+    for (int i = 0; i < 100; i++) {
+        std::cout << "Hello\n";
+    }
+}
+
+int main() {
+    f();
 }
 ```
 
