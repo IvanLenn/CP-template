@@ -367,6 +367,7 @@ int main() {
 - Derived class need to call base class contructor in the initializer list.
 - If using pointers, we need to define virtual constructor for base classes with virtual functions. The reason is potentially we might cast it to base pointers and then the destructors can't be correctly called.
 - When a derived class object is destroyed, the destructors are called in reverse order of the inheritance hierarchy. The derived class destructor is called first, followed by the base class destructor.
+- Virtual destructor is not "overloaded." Virtual destructor along path of inheritance will all be called.
 
 ```cpp
 #include <iostream>
@@ -416,6 +417,34 @@ int main() {
     ProduceClass* F = new ProduceClass(5);
     T->Test(); F->Test();
     delete T; delete F;
+}
+```
+
+```cpp
+#include <iostream>
+
+class Base {
+public:
+    Base() { std::cout << "Base Constructor\n"; }
+    ~Base() { std::cout << "Base Destructor\n"; }
+};
+
+class Derived : public Base {
+public:
+    Derived() { std::cout << "Derived Constructor\n"; }
+    ~Derived() { std::cout << "Derived Destructor\n"; }
+};
+
+int main() {
+    Base* base = new Base();
+    delete base;
+    std::cout << "---------------\n";
+    Derived* derived = new Derived();
+    delete derived;
+    std::cout << "---------------\n";
+    Base* tmp = new Derived();
+    delete tmp; // Only calling the base destructor.
+    // Need to make destructor virtual and override in derived class.
 }
 ```
 
@@ -496,6 +525,56 @@ int main() {
     f(); f(); // 0, 1
 }
 ```
+
+## L-value and R-value
+
+- Think of ***lvalue*** as location value-values with memory address.
+- Can't assign something to an ***rvalue*** because it has no storage to store the updated value.
+
+```cpp
+#include <iostream>
+
+int GetValue() {
+    return 10;
+}
+int& Get() {
+    static int val = 10;
+    return val;
+}
+
+int main() {
+    int i = 10; // i is lvalue, 10 is rvalue
+    int j = GetValue(); // RHS is also rvalue
+    // GetValue() = 10; // Error: expression must be a modifiable lvalueC/C++(137)
+    Get() = 5; // Okay
+}
+```
+
+- Can't take ***lvalue*** reference of a rvalue. Can take const lvalue reference of rvalue.
+- Use double ampersand for rvalue reference. If overloaded, it will be prioritized for rvalue inputs before const lvalue reference parameters.
+
+```cpp
+#include <iostream>
+
+void Print(std::string& s) { std::cout << s << std::endl; }
+void Print2(std::string&& s) { std::cout << s << std::endl; }
+void Print3(const std::string& s) { std::cout << "lvalue: " << s << std::endl; }
+void Print3(std::string&& s) { std::cout << "rvalue: " << s << std::endl; }
+
+int main() {
+    std::string a = "apple";
+    std::string b = "banana";
+    std::string ab = a + b; // a + b is rvalue
+    Print(ab);
+    // Print(a + b); // Not Okay
+    // Print2(ab); // Not Okay. Only rvalue is good.
+    Print2(a + b);
+    Print3(ab);    // lvalue: s
+    Print3(a + b); // rvalue: s
+}
+```
+
+
 
 ## Smart Pointer
 
@@ -1431,6 +1510,19 @@ void f() {
 
 int main() {
     f();
+}
+```
+
+## Sorting
+
+```cpp
+#include <iostream>
+#include <vector>
+
+int main() {
+    std::vector<int> T{3, 5, 4, 1, 2};
+    std::sort(T.begin(), T.end(), [](int a, int b) {return a > b;});
+    for (auto i : T) std::cout << i << std::endl;
 }
 ```
 
