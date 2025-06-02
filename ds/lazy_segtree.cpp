@@ -82,7 +82,6 @@ public:
         node[x] = op(node[2 * x + 1], node[2 * x + 2]);
     }
     void modify(int l, int r, F x) {
-        cout << l << ' ' << r << ' ' << x.add << '\n';
         modify(0, 0, _n, l, r, x);
     }
 
