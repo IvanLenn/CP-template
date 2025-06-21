@@ -1,14 +1,13 @@
-// dep 0-indexed;
-
-int a[3000][15];
 struct Lca{
-    vi sz, dep;
-    vector<vi> edge;
-    const int L = 15;
+    std::vector<std::vector<int>> a;
+    std::vector<int> sz, dep;
+    std::vector<std::vector<int>> edge;
+    const int L = 20;
 
     int root, n;
-    Lca(vector<vi> &e, int r) {
+    Lca(std::vector<std::vector<int>> &e, int r) {
         int N = (int)e.size();
+        a.resize(N, vector<int>(L));
         sz = vector<int>(N); dep = vector<int>(N);
         root = r;
         n = N;
